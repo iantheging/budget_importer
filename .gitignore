@@ -1,0 +1,14 @@
+# Google API credentials — never commit
+credentials.json
+
+# Private financial data
+inbox/
+archive/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Claude Code
+.claude/
