@@ -83,6 +83,18 @@ MERCHANT_OVERRIDES = {
     "playstat":           "Gaming",   # catches STORE.PLAYSTAT short form
     "nintendo":           "Gaming",
 
+    # Dining — fast food and restaurants (applied across all accounts)
+    "mcdonald":           "Dining",
+    "culver":             "Dining",
+    "chick-fil":          "Dining",
+    "popeyes":            "Dining",
+    "sonic":              "Dining",
+    "chipotle":           "Dining",
+    "taco bell":          "Dining",
+    "burger king":        "Dining",
+    "wendy":              "Dining",
+    "subway":             "Dining",
+
     # Bars
     "casual animal brew": "Bars",
     "john's big deck":    "Bars",
