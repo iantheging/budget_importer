@@ -196,8 +196,12 @@ DEBIT_SKIP_KEYWORDS = [
     "amex",                 # AMEX payment
     "visa payment",         # Wings Visa payment
     "digital transfer",     # internal Wings account-to-account transfer
-    "ian seal",             # self-initiated external fund transfer
 ]
+
+# Debit: keyword → display name, for descriptions that don't name the merchant
+DEBIT_LOCATION_OVERRIDES = {
+    "ian seal":       "Car Payment",  # monthly car loan, shows as "IAN SEAL  EXTERNAL F"
+}
 
 # Debit: keyword → category for expense transactions
 DEBIT_KEYWORD_CATEGORIES = {
@@ -214,6 +218,7 @@ DEBIT_KEYWORD_CATEGORIES = {
     "walmart":        "Shopping",
     "wal-mart":       "Shopping",
     "carwash":        "Car",
+    "ian seal":       "Car",        # monthly car loan payment (external transfer)
 }
 
 # Debit: keyword → income sub-category for credit transactions
@@ -387,6 +392,10 @@ def parse_wings_debit(filepath):
         merchant_raw = re.split(r'\s{2,}', description)[0].strip()
         merchant_raw = re.sub(r'\s*[\d#\-]+\s*$', '', merchant_raw).strip()
         location     = merchant_raw.title() if merchant_raw else description.title()
+        for keyword, name in DEBIT_LOCATION_OVERRIDES.items():
+            if keyword in desc_lower:
+                location = name
+                break
 
         if is_income:
             category = "Income"
@@ -492,18 +501,26 @@ PARSERS = {
 # GOOGLE SHEETS IMPORT
 # ──────────────────────────────────────────────
 
+def row_key(date, location, cost):
+    """Normalized (date, location, cost) key for duplicate detection.
+
+    The sheet displays values formatted (e.g. "$534.89", "4/6/2026") while parsed
+    rows use "534.89" / "04/06/2026", so both sides are normalized the same way.
+    """
+    try:
+        cost_key = str(round(float(str(cost).replace("$", "").replace(",", "").strip()), 2))
+    except ValueError:
+        cost_key = str(cost).strip()
+    return (parse_date(date), str(location).strip().lower(), cost_key)
+
+
 def get_existing_rows(worksheet):
-    """Return a set of (date, location, cost) tuples already in the sheet."""
+    """Return a set of normalized (date, location, cost) keys already in the sheet."""
     existing = worksheet.get_all_values()
     seen = set()
     for row in existing[1:]:  # skip header
         if len(row) >= 4:
-            try:
-                # Normalize cost to float string so "150" and "150.0" compare equal
-                cost_key = str(round(float(row[0].replace(",", "")), 2))
-            except (ValueError, AttributeError):
-                cost_key = row[0]
-            seen.add((row[3], row[1], cost_key))
+            seen.add(row_key(row[3], row[1], row[0]))
     return seen
 
 
@@ -525,7 +542,7 @@ def append_to_sheet(rows, sheet_name, worksheet_name, credentials_file):
     new_rows  = []
 
     for r in rows:
-        key = (r["Date"], r["Location"], str(round(float(r["Cost"]), 2)))
+        key = row_key(r["Date"], r["Location"], r["Cost"])
         if key not in existing:
             new_rows.append([r["Cost"], r["Location"], r["Category"], r["Date"], r["Account"]])
 
